@@ -1,43 +1,138 @@
 package com.example.books;
 
 import com.google.gson.Gson;
-
 import java.util.HashMap;
+import java.util.Collection;
 import java.util.List;
 
+/**
+ * Diese Klasse verarbeitet Datensätze, konvertiert JSON in Objekte
+ * und berechnet die Gesamtnutzungszeit der Workloads pro Kunde.
+ */
 public class DatenVerarbeitung {
 
-    // Konvertiert JSON zu Dataset-Objekt
-    public Dataset konvertiereJsonZuDatensatz(String json) {
-        Gson gson = new Gson();
-        return gson.fromJson(json, Dataset.class);
+    /**
+     * Diese Klasse repräsentiert einen Kunden mit einer bestimmten Nutzungszeit.
+     */
+    public static class Kunde {
+        private String kundenId;
+        private long nutzungszeit;
+
+        public Kunde(String kundenId, long nutzungszeit) {
+            this.kundenId = kundenId;
+            this.nutzungszeit = nutzungszeit;
+        }
+
+        public String getKundenId() {
+            return kundenId;
+        }
+
+        public long getNutzungszeit() {
+            return nutzungszeit;
+        }
+
+        public void setNutzungszeit(long nutzungszeit) {
+            this.nutzungszeit = nutzungszeit;
+        }
     }
 
-    // Konvertiert Result-Objekt zu JSON
-    public String konvertiereErgebnisZuJson(Result result) {
-        Gson gson = new Gson();
-        return gson.toJson(result);
+    /**
+     * Diese Klasse repräsentiert ein Ereignis (Start/Stop) eines Workloads für einen Kunden.
+     */
+    public static class Ereignis {
+        private String kundenId;
+        private long zeitstempel;
+        private String ereignisTyp;
+
+        public String getKundenId() {
+            return kundenId;
+        }
+
+        public long getZeitstempel() {
+            return zeitstempel;
+        }
+
+        public String getEreignisTyp() {
+            return ereignisTyp;
+        }
+
+
     }
 
-    // Verarbeitet Dataset und berechnet die Gesamtlaufzeit pro Kunde
-    public Result verarbeiteDatensatzZuErgebnis(Dataset dataset) {
-        
-        HashMap<String, Customer> kundenErgebnisse = new HashMap<>();
+    /**
+     * Diese Klasse repräsentiert einen Datensatz, der eine Liste von Ereignissen enthält.
+     */
+    public static class Datensatz {
+        private List<Ereignis> ereignisse;
 
-        dataset.events().forEach(event -> {
-            kundenErgebnisse.computeIfPresent(event.customerId(), (id, kunde) -> {
-                if (event.eventType().equals("start")) {
-                    kunde.setConsumption(kunde.getConsumption() - event.timestamp());
-                } else if (event.eventType().equals("stop")) {
-                    kunde.setConsumption(kunde.getConsumption() + event.timestamp());
+        public List<Ereignis> getEreignisse() {
+            return ereignisse;
+        }
+    }
+
+    /**
+     * Diese Klasse enthält die berechneten Ergebnisse für mehrere Kunden.
+     */
+    public static class Ergebnis {
+        private Collection<Kunde> ergebnisse;
+
+        public Ergebnis(Collection<Kunde> ergebnisse) {
+            this.ergebnisse = ergebnisse;
+        }
+
+        public Collection<Kunde> getErgebnisse() {
+            return ergebnisse;
+        }
+    }
+
+    /**
+     * Konvertiert einen JSON-String zu einem Datensatz-Objekt.
+     * @param json Der JSON-String, der den Datensatz repräsentiert.
+     * @return Ein Datensatz-Objekt.
+     */
+    public Datensatz konvertiereJsonZuDatensatz(String json) {
+        Gson gson = new Gson();
+        return gson.fromJson(json, Datensatz.class);
+    }
+
+    /**
+     * Konvertiert ein Ergebnis-Objekt zu einem JSON-String.
+     * @param ergebnis Das Ergebnis-Objekt, das die Ergebnisse enthält.
+     * @return Ein JSON-String, der das Ergebnis darstellt.
+     */
+    public String konvertiereErgebnisZuJson(Ergebnis ergebnis) {
+        Gson gson = new Gson();
+        return gson.toJson(ergebnis);
+    }
+
+    /**
+     * Verarbeitet den Datensatz und berechnet die Gesamtnutzungszeit für jeden Kunden.
+     * @param datensatz Der Datensatz mit den Start- und Stop-Ereignissen.
+     * @return Das berechnete Ergebnis für alle Kunden.
+     */
+    public Ergebnis verarbeiteDatensatzZuErgebnis(Datensatz datensatz) {
+        HashMap<String, Kunde> kundenErgebnisse = new HashMap<>();
+
+        // Iteriere über alle Ereignisse
+        datensatz.getEreignisse().forEach(ereignis -> {
+            // Wenn Kunde existiert, aktualisiere Nutzungszeit basierend auf dem Ereignis-Typ
+            kundenErgebnisse.computeIfPresent(ereignis.getKundenId(), (id, kunde) -> {
+                if (ereignis.getEreignisTyp().equals("start")) {
+                    // Start-Ereignis: Nutzungszeit reduzieren
+                    kunde.setNutzungszeit(kunde.getNutzungszeit() - ereignis.getZeitstempel());
+                } else if (ereignis.getEreignisTyp().equals("stop")) {
+                    // Stop-Ereignis: Nutzungszeit erhöhen
+                    kunde.setNutzungszeit(kunde.getNutzungszeit() + ereignis.getZeitstempel());
                 }
                 return kunde;
             });
 
-            kundenErgebnisse.putIfAbsent(event.customerId(), new Customer(event.customerId(),
-                    event.eventType().equals("start") ? -event.timestamp() : event.timestamp()));
+            // Falls Kunde nicht existiert, füge neuen Kunden hinzu
+            kundenErgebnisse.putIfAbsent(ereignis.getKundenId(), new Kunde(ereignis.getKundenId(),
+                    ereignis.getEreignisTyp().equals("start") ? -ereignis.getZeitstempel() : ereignis.getZeitstempel()));
         });
 
-        return new Result(kundenErgebnisse.values());
+        // Rückgabe des Ergebnisses
+        return new Ergebnis(kundenErgebnisse.values());
     }
 }

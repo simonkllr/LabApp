@@ -1,24 +1,27 @@
 package com.example.books;
 
-
+/**
+ * Die Hauptklasse steuert den gesamten Ablauf des Programms.
+ * Sie ruft den Datensatz ab, verarbeitet ihn und sendet die Ergebnisse zurück.
+ */
 public class Main {
     public static void main(String[] args) {
         DatenAustausch datenAustausch = new DatenAustausch();
         DatenVerarbeitung datenVerarbeitung = new DatenVerarbeitung();
 
-        // Daten von der API abrufen
-        String datasetJson = datenAustausch.holeDatensatzAlsJson();
+        // 1. Daten von der API abrufen
+        String datensatzJson = datenAustausch.holeDatensatzAlsJson();
 
-        // JSON zu Dataset konvertieren
-        Dataset dataset = datenVerarbeitung.konvertiereJsonZuDatensatz(datasetJson);
+        // 2. JSON zu Datensatz konvertieren
+        DatenVerarbeitung.Datensatz datensatz = datenVerarbeitung.konvertiereJsonZuDatensatz(datensatzJson);
 
-        // Daten verarbeiten (Berechnung der Laufzeiten)
-        Result result = datenVerarbeitung.verarbeiteDatensatzZuErgebnis(dataset);
+        // 3. Daten verarbeiten (Berechnung der Laufzeiten)
+        DatenVerarbeitung.Ergebnis ergebnis = datenVerarbeitung.verarbeiteDatensatzZuErgebnis(datensatz);
 
-        // Resultat als JSON konvertieren
-        String resultJson = datenVerarbeitung.konvertiereErgebnisZuJson(result);
+        // 4. Ergebnis als JSON konvertieren
+        String ergebnisJson = datenVerarbeitung.konvertiereErgebnisZuJson(ergebnis);
 
-        // Ergebnis an API senden
-        datenAustausch.sendeErgebnis(resultJson);
+        // 5. Ergebnis an API senden
+        datenAustausch.sendeErgebnis(ergebnisJson);
     }
 }
